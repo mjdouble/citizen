@@ -13,6 +13,8 @@ const {
 } = require('../stores/store');
 const { extractShasum } = require('../lib/util');
 
+const REG_URL = process.env.CITIZEN_ADDR;
+
 const router = Router();
 
 // register a provider with version
@@ -104,7 +106,7 @@ router.post('/:namespace/:type/:version', (req, res, next) => {
       }
 
       const isFilesMatched = data.platforms
-        .every((p) => providerFiles.some((f) => f.filename === `${namespace}-${type}_${version}_${p.os}_${p.arch}.zip`));
+        .every((p) => providerFiles.some((f) => f.filename === `terraform-provider-${type}_${version}_${p.os}_${p.arch}.zip`));
       if (!isFilesMatched) {
         const error = new Error('Unmatched platform data and files');
         error.status = 400;
@@ -177,9 +179,9 @@ router.get('/:namespace/:type/:version/download/:os/:arch', async (req, res, nex
     filename: platform.filename,
     os: platform.os,
     arch: platform.arch,
-    downloadUrl: `/v1/providers/${options.namespace}/${options.type}/${options.version}/download/${options.os}/${options.arch}/zip`,
-    shaSumsUrl: `/v1/providers/${options.namespace}/${options.type}/${options.version}/sha256sums`,
-    shaSumsSignatureUrl: `/v1/providers/${options.namespace}/${options.type}/${options.version}/sha256sums.sig`,
+    downloadUrl: `${REG_URL}/v1/providers/${options.namespace}/${options.type}/${options.version}/download/${options.os}/${options.arch}/zip`,
+    shaSumsUrl: `${REG_URL}/v1/providers/${options.namespace}/${options.type}/${options.version}/download/${options.os}/${options.arch}/sha256sums`,
+    shaSumsSignatureUrl: `${REG_URL}/v1/providers/${options.namespace}/${options.type}/${options.version}/download/${options.os}/${options.arch}/sha256sums.sig`,
     shasum: platform.shasum,
     gpgPublicKeys: providerPackage.gpgPublicKeys,
   };
@@ -210,11 +212,11 @@ router.get('/:namespace/:type/:version/download/:os/:arch/zip', async (req, res,
   }
 });
 
-router.get('/:namespace/:type/:version/sha256sums', async (req, res, next) => {
+router.get('/:namespace/:type/:version/download/:os/:arch/sha256sums', async (req, res, next) => {	
   try {
     const options = { ...req.params };
 
-    const sumsLocation = `${options.namespace}/${options.type}/${options.version}/${options.namespace}-${options.type}_${options.version}_SHA256SUMS`;
+    const sumsLocation = `${options.namespace}/${options.type}/${options.version}/terraform-provider-${options.type}_${options.version}_SHA256SUMS`;
     const shasumsContent = await getProvider(sumsLocation);
     if (!shasumsContent) { return next(); }
 
@@ -231,10 +233,10 @@ router.get('/:namespace/:type/:version/sha256sums', async (req, res, next) => {
   }
 });
 
-router.get('/:namespace/:type/:version/sha256sums.sig', async (req, res, next) => {
+router.get('/:namespace/:type/:version/download/:os/:arch/sha256sums.sig', async (req, res, next) => {
   try {
     const options = { ...req.params };
-    const sigLocation = `${options.namespace}/${options.type}/${options.version}/${options.namespace}-${options.type}_${options.version}_SHA256SUMS.sig`;
+    const sigLocation = `${options.namespace}/${options.type}/${options.version}/terraform-provider-${options.type}_${options.version}_SHA256SUMS.sig`;
     const sig = await getProvider(sigLocation);
     if (!sig) { return next(); }
 
@@ -245,7 +247,7 @@ router.get('/:namespace/:type/:version/sha256sums.sig', async (req, res, next) =
 
     return res
       .set('Content-Type', 'application/octet-stream')
-      .set('Content-disposition', `attachment; filename=${options.namespace}-${options.type}_${options.version}_SHA256SUMS.sig`)
+      .set('Content-disposition', `attachment; filename=terraform-provider-${options.type}_${options.version}_SHA256SUMS.sig`)
       .send(sig);
   } catch (e) {
     return next(e);
